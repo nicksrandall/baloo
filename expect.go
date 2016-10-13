@@ -3,9 +3,10 @@ package baloo
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
 
-	"gopkg.in/h2non/baloo.v0/assert"
+	"github.com/nicksrandall/baloo/assert"
 )
 
 // Assertions stores global assertion functions by alias name.
@@ -27,14 +28,16 @@ func FlushAssertFuncs() {
 // Expect represents the HTTP expectation suite who is
 // able to define multiple assertion functions to match the response.
 type Expect struct {
-	test       *testing.T
-	request    *Request
-	assertions []assert.Func
+	test          *testing.T
+	request       *Request
+	assertions    []assert.Func
+	ignoredFields map[string]assert.FieldFunc
 }
 
 // NewExpect creates a new testing expectation instance.
 func NewExpect(req *Request) *Expect {
-	return &Expect{request: req}
+	ignored := map[string]assert.FieldFunc{}
+	return &Expect{request: req, ignoredFields: ignored}
 }
 
 // BindTest binds the Go testing instance to the current suite.
@@ -42,6 +45,11 @@ func NewExpect(req *Request) *Expect {
 // be supported via adapters.
 func (e *Expect) BindTest(t *testing.T) *Expect {
 	e.test = t
+	return e
+}
+
+func (e *Expect) Field(path string, test assert.FieldFunc) *Expect {
+	e.ignoredFields[path] = test
 	return e
 }
 
@@ -149,6 +157,13 @@ func (e *Expect) BodyLength(length int) *Expect {
 	return e
 }
 
+func (e *Expect) BodySnap() *Expect {
+	v := reflect.ValueOf(*e.test)
+	name := v.FieldByName("name").String()
+	e.AssertFunc(assert.BodySnap(name, e.ignoredFields))
+	return e
+}
+
 // JSON asserts the response body with the given JSON struct.
 func (e *Expect) JSON(data interface{}) *Expect {
 	e.AssertFunc(assert.JSON(data))
@@ -185,6 +200,11 @@ func (e *Expect) AssertFunc(assertion ...assert.Func) *Expect {
 // Done performs and asserts the HTTP response based
 // on the defined expectations.
 func (e *Expect) Done() error {
+	// build test for ignored fields
+	if len(e.ignoredFields) > 0 {
+		e.AssertFunc(assert.BuildFieldTest(e.ignoredFields))
+	}
+
 	// Perform the HTTP request
 	res, err := e.request.Send()
 	if err != nil {

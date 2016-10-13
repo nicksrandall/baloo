@@ -6,3 +6,5 @@ import (
 
 // Func represents the required interface for assertion functions.
 type Func func(*http.Response, *http.Request) error
+
+type FieldFunc func(interface{}) error

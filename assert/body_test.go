@@ -2,8 +2,12 @@ package assert
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"os"
 	"testing"
 
 	"github.com/nbio/st"
@@ -44,4 +48,49 @@ func TestBodyEquals(t *testing.T) {
 	st.Reject(t, BodyEquals("hello")(res, nil), nil)
 	st.Reject(t, BodyEquals("foo")(res, nil), nil)
 	st.Reject(t, BodyEquals("")(res, nil), nil)
+}
+
+func TestBodySnap(t *testing.T) {
+	os.RemoveAll(Directory)
+	t.Run("body-snap", func(t *testing.T) {
+		name := "find-me-snap-test"
+		b, _ := json.MarshalIndent(map[string]interface{}{
+			"bool":   true,
+			"number": 46,
+			"float":  46.1,
+			"string": "golang",
+		}, "", "  ")
+		url, _ := url.Parse("http://nickrandall.com")
+		req := &http.Request{URL: url}
+
+		ignoredFields := map[string]FieldFunc{}
+
+		body := ioutil.NopCloser(bytes.NewBuffer(b))
+		res := &http.Response{Body: body}
+		st.Expect(t, BodySnap(name, ignoredFields)(res, req), nil)
+
+		body = ioutil.NopCloser(bytes.NewBuffer(b))
+		res = &http.Response{Body: body}
+		st.Expect(t, BodySnap(name, ignoredFields)(res, req), nil)
+
+		// TODO: add tests
+		// add test to make sure file is created and json is what is expected
+		file := Directory + "/" + name + "-body.snap"
+		_, err := os.Stat(file)
+		st.Expect(t, os.IsNotExist(err), false)
+		fileContents, _ := ioutil.ReadFile(file)
+		st.Expect(t, string(b), string(fileContents))
+
+		b, _ = json.Marshal(map[string]interface{}{
+			"bool":   true,
+			"number": 46,
+			"float":  46.1,
+		})
+		body = ioutil.NopCloser(bytes.NewBuffer(b))
+		res = &http.Response{Body: body}
+		st.Reject(t, BodySnap(name, ignoredFields)(res, req), nil)
+	})
+
+	fmt.Println("[Baloo]: Cleaned up snapshots")
+	os.RemoveAll(Directory)
 }

@@ -11,6 +11,9 @@ import (
 // NewHandler is a convenient alias to gentleman.NewHandler factory.
 var NewHandler = gentleman.NewHandler
 
+// we use this flag on snapshot to see if we should rest snapshots
+var ResetFlag bool = false
+
 // Client represents a high-level HTTP client entity capable
 // with a built-in middleware and context.
 type Client struct {
