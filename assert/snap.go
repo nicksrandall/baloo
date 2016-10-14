@@ -22,7 +22,6 @@ var Update bool = false
 func init() {
 	os.MkdirAll(Directory, 0777)
 	flag.BoolVar(&Update, "update-all", false, "use this flag to update all failing snapshots")
-	flag.Parse()
 }
 
 func Shot(key string, data interface{}) (success bool, diff string, err error) {

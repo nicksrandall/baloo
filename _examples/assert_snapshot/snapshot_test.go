@@ -1,6 +1,8 @@
 package assert_snapshot
 
 import (
+	"flag"
+	"os"
 	"testing"
 
 	"github.com/nicksrandall/baloo"
@@ -19,4 +21,9 @@ func TestBalooSnapshot(t *testing.T) {
 		Field("user-agent", assert.FieldIsString).
 		BodySnap().
 		Done()
+}
+
+func TestMain(t *testing.M) {
+	flag.Parse()
+	os.Exit(t.Run())
 }
